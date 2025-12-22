@@ -1,7 +1,14 @@
+// /workspaces/loginout/log-in-diary/src/app/navigation/MainTabs.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Pressable, Animated, Easing } from "react-native";
-import { createBottomTabNavigator, BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { View, Pressable, Animated, Easing, Platform } from "react-native";
+import {
+  createBottomTabNavigator,
+  BottomTabBarProps,
+} from "@react-navigation/bottom-tabs";
 import { Text } from "react-native-paper";
+
+// ✅ Expo 프로젝트에서는 이게 정답
+import { MaterialIcons } from "@expo/vector-icons";
 
 import HomeScreen from "../../screens/home/HomeScreen";
 import CalendarScreen from "../../screens/calendar/CalendarScreen";
@@ -11,35 +18,33 @@ import ProfileScreen from "../../screens/profile/ProfileScreen";
 
 const Tab = createBottomTabNavigator();
 
-// ✅ 과일 아이콘 + 선택된 탭만 텍스트
-const TAB_META: Record<string, { label: string; icon: string }> = {
-  Home: { label: "홈", icon: "🍓" },
-  Calendar: { label: "캘린더", icon: "🍏" },
-  Write: { label: "기록", icon: "🍑" },
-  Report: { label: "리포트", icon: "🍇" },
-  Profile: { label: "내정보", icon: "🍋" },
+// ✅ MUI 느낌(Material Icons)으로 아이콘 매핑
+// (MaterialIcons glyph는 문자열 리터럴로 충분히 잘 잡힘)
+const TAB_META: Record<
+  string,
+  { label: string; icon: React.ComponentProps<typeof MaterialIcons>["name"] }
+> = {
+  Home: { label: "홈", icon: "home" },
+  Calendar: { label: "캘린더", icon: "calendar-today" },
+  Write: { label: "기록", icon: "edit" }, // "edit-note"가 없을 수 있어 안전하게 "edit"
+  Report: { label: "리포트", icon: "insert-chart" }, // outlined 필요하면 "insert-chart-outlined" 시도 가능
+  Profile: { label: "내정보", icon: "account-circle" },
 };
 
 function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const routes = state.routes;
   const n = routes.length;
 
-  // 레이아웃 계산용
   const [innerWidth, setInnerWidth] = useState(0);
-
-  // pill 이동 애니메이션
   const pillX = useRef(new Animated.Value(0)).current;
 
-  // 탭 간격(가운데 빈 공간 느낌)
   const GAP = 10;
 
   const tabWidth = useMemo(() => {
     if (!innerWidth || n === 0) return 0;
-    // innerWidth = (전체 내부폭) = (탭 n개 폭 합) + (gap*(n-1))
     return (innerWidth - GAP * (n - 1)) / n;
   }, [innerWidth, n]);
 
-  // index 바뀔 때 pill 이동
   useEffect(() => {
     if (!tabWidth) return;
     const to = state.index * (tabWidth + GAP);
@@ -55,7 +60,9 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   // 눌림(press) 스케일 애니메이션: per-tab
   const pressMapRef = useRef<Record<string, Animated.Value>>({});
   routes.forEach((r) => {
-    if (!pressMapRef.current[r.key]) pressMapRef.current[r.key] = new Animated.Value(1);
+    if (!pressMapRef.current[r.key]) {
+      pressMapRef.current[r.key] = new Animated.Value(1);
+    }
   });
 
   const activeBg = "rgba(40,40,160,0.95)";
@@ -81,7 +88,6 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
         elevation: 8,
       }}
     >
-      {/* 내부 row: 여기 폭을 재서 tabWidth 계산 */}
       <View
         onLayout={(e) => setInnerWidth(e.nativeEvent.layout.width)}
         style={{
@@ -92,7 +98,7 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
           height: 44,
         }}
       >
-        {/* ✅ 슬라이딩 pill (배경) */}
+        {/* ✅ 슬라이딩 pill */}
         {tabWidth > 0 && (
           <Animated.View
             pointerEvents="none"
@@ -109,10 +115,12 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
           />
         )}
 
-        {/* ✅ 탭 버튼들 */}
         {routes.map((route, index) => {
           const isFocused = state.index === index;
-          const meta = TAB_META[route.name] ?? { label: route.name, icon: "🍒" };
+          const meta =
+            TAB_META[route.name] ??
+            ({ label: route.name, icon: "circle" } as any);
+
           const press = pressMapRef.current[route.key];
 
           const onPressIn = () => {
@@ -139,6 +147,7 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
               target: route.key,
               canPreventDefault: true,
             });
+
             if (!isFocused && !event.defaultPrevented) {
               navigation.navigate(route.name as never);
             }
@@ -164,18 +173,20 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
                   transform: [{ scale: press }],
                 }}
               >
-                <Text
-                  style={{
-                    fontSize: isFocused ? 22 : 20,
-                    color: isFocused ? "#fff" : inactiveIcon,
-                  }}
-                >
-                  {meta.icon}
-                </Text>
+                <MaterialIcons
+                  name={meta.icon}
+                  size={isFocused ? 24 : 22}
+                  color={isFocused ? "#fff" : inactiveIcon}
+                />
 
-                {/* ✅ 선택된 탭만 라벨 노출 */}
                 {isFocused ? (
-                  <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>
+                  <Text
+                    style={{
+                      color: "#fff",
+                      fontSize: 12,
+                      fontWeight: "700",
+                    }}
+                  >
                     {meta.label}
                   </Text>
                 ) : null}
@@ -193,7 +204,7 @@ export default function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { display: "none" }, // 기본 탭바 숨김
+        tabBarStyle: { display: "none" },
       }}
       tabBar={(props) => <FloatingTabBar {...props} />}
     >

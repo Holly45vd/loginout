@@ -10,6 +10,9 @@ import SignupScreen from "../../screens/auth/SignupScreen";
 import ForgotPasswordScreen from "../../screens/auth/ForgotPasswordScreen";
 import DayDetailScreen from "../../screens/calendar/DayDetailScreen";
 
+// ✅ 추가: EntryEditor를 Stack에서 직접 열기 위함
+import EntryEditorScreen from "../../screens/entry/EntryEditorScreen";
+
 // ✅ 경로 수정 (중요)
 import RecentDiaryListScreen from "../../screens/home/components/RecentDiaryListScreen";
 
@@ -23,6 +26,9 @@ export type RootStackParamList = {
 
   // ✅ 추가: Recent 목록 화면
   RecentDiaryList: undefined;
+
+  // ✅ 추가: DayDetail에서 "수정" 누르면 여기로 이동
+  EntryEditor: { date?: string } | undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -60,6 +66,17 @@ export default function RootNavigator() {
             options={{
               headerShown: true,
               title: "일기 상세",
+              presentation: "card",
+            }}
+          />
+
+          {/* ✅ 핵심: 편집 화면을 Stack에 등록 */}
+          <Stack.Screen
+            name="EntryEditor"
+            component={EntryEditorScreen}
+            options={{
+              headerShown: true,
+              title: "일기 작성/수정",
               presentation: "card",
             }}
           />

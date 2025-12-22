@@ -1,34 +1,31 @@
+// /workspaces/loginout/log-in-diary/src/screens/entry/EntryEditorScreen.tsx
 import React, { useMemo, useState } from "react";
-import { ScrollView, View, Pressable } from "react-native";
+import { ScrollView, View, Pressable, Platform } from "react-native";
 import dayjs from "dayjs";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
-import {
-  Button,
-  Card,
-  Chip,
-  Divider,
-  Text,
-  TextInput,
-  SegmentedButtons,
-  Surface,
-} from "react-native-paper";
+import { Button, Card, Divider, Text, TextInput } from "react-native-paper";
 
 import { useAuth } from "../../app/providers/AuthProvider";
 import { upsertDiary } from "../../data/firebase/diaryRepo";
 
-type MoodKey =
-  | "anxiety"
-  | "coldness"
-  | "lethargy"
-  | "lonely"
-  | "calm"
-  | "sadness"
-  | "happiness"
-  | "hope"
-  | "growth"
-  | "confident";
+import TopicPicker from "./components/TopicPicker";
+import BatteryEnergyPicker from "./components/BatteryEnergyPicker";
+import MoodGridPicker, { MoodKey } from "./components/MoodGridPicker";
+import MoodScorePicker from "./components/MoodScorePicker";
 
-const DEFAULT_TOPICS = ["일", "관계", "건강", "돈", "나", "가족", "공부", "취미"] as const;
+/** ====== Const ====== */
+const DEFAULT_TOPICS = [
+  "일",
+  "관계",
+  "건강",
+  "돈",
+  "나",
+  "가족",
+  "공부",
+  "취미",
+] as const;
+
 const EXTRA_TOPICS = ["휴식", "기타", "연애", "이직"] as const;
 
 const ENERGY = [
@@ -39,58 +36,42 @@ const ENERGY = [
   { key: "full", label: "풀충전", score: 5 },
 ] as const;
 
-const MOODS: Array<{
-  key: MoodKey;
-  icon: string;
-  en: string;
-  ko: string;
-}> = [
-  { key: "anxiety", icon: "🌩️", en: "Anxiety", ko: "불안" },
-  { key: "coldness", icon: "☁️", en: "Coldness", ko: "냉담" },
-  { key: "lethargy", icon: "🌧️", en: "Lethargy", ko: "무기력" },
-  { key: "lonely", icon: "🌙", en: "Lonely", ko: "외로움" },
-  { key: "calm", icon: "🌤️", en: "Calm", ko: "평온" },
-  { key: "sadness", icon: "🌫️", en: "Sadness", ko: "슬픔" },
-  { key: "happiness", icon: "☀️", en: "Happiness", ko: "행복" },
-  { key: "hope", icon: "🌈", en: "Hope", ko: "희망" },
-  { key: "growth", icon: "🌱", en: "Growth", ko: "성장" },
-  { key: "confident", icon: "🔥", en: "Confident", ko: "자신감" },
-];
+type EnergyKey = (typeof ENERGY)[number]["key"];
 
-function toggleArr(arr: string[], v: string) {
-  return arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
+/** ====== Utils ====== */
+function isFutureDate(yyyyMMdd: string, today: string) {
+  return dayjs(yyyyMMdd).isAfter(dayjs(today), "day");
+}
+
+function clampToToday(yyyyMMdd: string, today: string) {
+  return isFutureDate(yyyyMMdd, today) ? today : yyyyMMdd;
 }
 
 export default function EntryEditorScreen({ navigation, route }: any) {
-  // ✅ Hook은 반드시 컴포넌트 안에서!
   const { user } = useAuth();
 
-  const initialDate = route?.params?.date ?? dayjs().format("YYYY-MM-DD");
+  const todayId = dayjs().format("YYYY-MM-DD");
+  const initialDate = route?.params?.date ?? todayId;
 
   const [date, setDate] = useState<string>(initialDate);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
   const [topics, setTopics] = useState<string[]>([]);
-  const [topicInput, setTopicInput] = useState("");
-  const [energy, setEnergy] = useState<string | undefined>(undefined);
+  const [energyKey, setEnergyKey] = useState<EnergyKey | undefined>(undefined);
+
   const [mood, setMood] = useState<MoodKey | undefined>(undefined);
+  const [moodScore, setMoodScore] = useState<number>(0); // 1~5, 0=미선택
+
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const topicCandidates = useMemo(
-    () => [...DEFAULT_TOPICS, ...EXTRA_TOPICS],
-    []
-  );
-
-  const canSave = Boolean(user && energy && mood) && !saving;
-
-  const selectedMood = useMemo(
-    () => MOODS.find((m) => m.key === mood),
-    [mood]
-  );
-
   const energyObj = useMemo(
-    () => ENERGY.find((e) => e.key === energy),
-    [energy]
+    () => ENERGY.find((e) => e.key === energyKey),
+    [energyKey]
   );
+
+  const futureBlocked = isFutureDate(date, todayId);
+  const canSave = Boolean(user && energyObj && mood) && !saving && !futureBlocked;
 
   async function onSave() {
     if (!user) {
@@ -99,19 +80,26 @@ export default function EntryEditorScreen({ navigation, route }: any) {
     }
     if (!energyObj || !mood) return;
 
-    const topicValue = topics[0] ?? ""; // 스샷 구조(topic: string) 유지
+    const safeDate = clampToToday(date, todayId);
+    if (isFutureDate(safeDate, todayId)) {
+      alert("오늘 이후 날짜에는 일기를 작성할 수 없습니다.");
+      return;
+    }
+
+    const topicValue = topics[0] ?? "";
     const energyScore = energyObj.score;
 
     try {
       setSaving(true);
 
-await upsertDiary(user.uid, date, {
-  topic: topicValue,
-  mood,
-  energy: energyScore,
-  score: energyScore,
-  content: note ?? "",
-});
+      await upsertDiary(user.uid, safeDate, {
+        topic: topicValue,
+        mood,
+        energy: energyScore,
+        score: energyScore, // 기존 로직 유지
+        moodScore: moodScore ? moodScore : null, // ✅ 기분점수(선택 안하면 null)
+        content: note ?? "",
+      });
 
       navigation.goBack();
     } catch (e: any) {
@@ -119,13 +107,6 @@ await upsertDiary(user.uid, date, {
     } finally {
       setSaving(false);
     }
-  }
-
-  function addCustomTopic() {
-    const v = topicInput.trim();
-    if (!v) return;
-    setTopics((prev) => (prev.includes(v) ? prev : [...prev, v]));
-    setTopicInput("");
   }
 
   return (
@@ -138,52 +119,56 @@ await upsertDiary(user.uid, date, {
       <Text variant="titleMedium" style={{ marginBottom: 6 }}>
         날짜
       </Text>
-      <TextInput
-        value={date}
-        onChangeText={setDate}
-        mode="outlined"
-        placeholder="YYYY-MM-DD"
-        right={<TextInput.Icon icon="calendar" />}
-      />
+
+      <Pressable onPress={() => setShowDatePicker(true)}>
+        <View pointerEvents="none">
+          <TextInput
+            value={date}
+            mode="outlined"
+            placeholder="YYYY-MM-DD"
+            right={<TextInput.Icon icon="calendar" />}
+            editable={false}
+          />
+        </View>
+      </Pressable>
+
+      {showDatePicker && (
+        <DateTimePicker
+          value={dayjs(date).toDate()}
+          mode="date"
+          display={Platform.OS === "ios" ? "spinner" : "calendar"}
+          maximumDate={dayjs(todayId).toDate()} // ✅ 오늘까지만 선택
+          onChange={(event, selected) => {
+            // Android는 선택/취소 즉시 닫기
+            if (Platform.OS !== "ios") setShowDatePicker(false);
+
+            if (event.type === "dismissed" || !selected) return;
+
+            const picked = dayjs(selected).format("YYYY-MM-DD");
+            setDate(clampToToday(picked, todayId));
+
+            // iOS도 선택 후 닫고 싶으면 주석 해제
+            // if (Platform.OS === "ios") setShowDatePicker(false);
+          }}
+        />
+      )}
+
+      {futureBlocked && (
+        <Text style={{ marginTop: 8, color: "#B00020" }}>
+          오늘 이후 날짜에는 일기를 작성할 수 없습니다.
+        </Text>
+      )}
 
       <View style={{ height: 16 }} />
 
       {/* 오늘의 주제 */}
-      <Text variant="titleMedium" style={{ marginBottom: 8 }}>
-        오늘의 주제
-      </Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-        {topicCandidates.map((t) => {
-          const selected = topics.includes(t);
-          return (
-            <Chip
-              key={t}
-              selected={selected}
-              onPress={() => setTopics((prev) => toggleArr(prev, t))}
-              mode="outlined"
-            >
-              {t}
-            </Chip>
-          );
-        })}
-      </View>
-
-      <View style={{ height: 10 }} />
-
-      <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-        <TextInput
-          value={topicInput}
-          onChangeText={setTopicInput}
-          mode="outlined"
-          placeholder="주제 추가"
-          style={{ flex: 1 }}
-          onSubmitEditing={addCustomTopic}
-          returnKeyType="done"
-        />
-        <Button mode="contained" onPress={addCustomTopic}>
-          추가
-        </Button>
-      </View>
+      <TopicPicker
+        title="오늘의 주제"
+        defaultTopics={DEFAULT_TOPICS}
+        extraTopics={EXTRA_TOPICS}
+        selectedTopics={topics}
+        onChangeSelectedTopics={setTopics}
+      />
 
       <View style={{ height: 18 }} />
       <Divider />
@@ -193,56 +178,55 @@ await upsertDiary(user.uid, date, {
       <Text variant="titleMedium" style={{ marginBottom: 8 }}>
         오늘의 에너지
       </Text>
-      <SegmentedButtons
-        value={energy}
-        onValueChange={setEnergy}
-        buttons={ENERGY.map((e) => ({ value: e.key, label: e.label }))}
+
+      <BatteryEnergyPicker
+        value={energyObj?.score ?? 0}
+        onChange={(next) => {
+          const picked = ENERGY.find((x) => x.score === next);
+          setEnergyKey(picked?.key);
+        }}
+        labels
+        size="lg"
+        animated
       />
 
       <View style={{ height: 18 }} />
       <Divider />
       <View style={{ height: 18 }} />
 
-      {/* 기분 */}
-      <Text variant="titleMedium" style={{ marginBottom: 8, textAlign: "center" }}>
-        오늘의 기분
-      </Text>
+      {/* 기분(9개, 3x3) */}
+      <MoodGridPicker
+        value={mood}
+        onChange={(next) => {
+          // ✅ 기분이 바뀌면 점수 초기화 (UX 꼬임 방지)
+          setMood(next);
+          setMoodScore(0);
+        }}
+      />
 
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
-        {MOODS.map((m) => {
-          const selected = mood === m.key;
+      {/* ✅ 기분을 선택해야만 기분점수 노출 */}
+      {mood && (
+        <>
+          <View style={{ height: 18 }} />
+          <Divider />
+          <View style={{ height: 18 }} />
 
-          return (
-            <Pressable key={m.key} onPress={() => setMood(m.key)} style={{ width: "45%" }}>
-              <Surface
-                elevation={selected ? 3 : 0}
-                style={{
-                  borderRadius: 14,
-                  paddingVertical: 14,
-                  paddingHorizontal: 12,
-                  borderWidth: 1,
-                  borderColor: selected ? "rgba(60,60,120,0.6)" : "rgba(0,0,0,0.12)",
-                  backgroundColor: selected ? "rgba(60,60,120,0.06)" : "white",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                <Text style={{ fontSize: 34 }}>{m.icon}</Text>
-                <Text variant="titleSmall">{m.en}</Text>
-                <Text variant="bodySmall" style={{ opacity: 0.7 }}>
-                  {m.ko}
-                </Text>
-              </Surface>
-            </Pressable>
-          );
-        })}
-      </View>
+          <Text
+            variant="titleMedium"
+            style={{ marginBottom: 8, textAlign: "center" }}
+          >
+            기분 점수
+          </Text>
+
+          <MoodScorePicker value={moodScore} onChange={setMoodScore} />
+        </>
+      )}
 
       <View style={{ height: 18 }} />
       <Divider />
       <View style={{ height: 18 }} />
 
-      {/* 텍스트 */}
+      {/* 오늘의 하루 */}
       <Text variant="titleMedium" style={{ marginBottom: 8 }}>
         오늘의 하루
       </Text>
@@ -257,13 +241,15 @@ await upsertDiary(user.uid, date, {
 
       <View style={{ height: 18 }} />
 
+      {/* 요약 */}
       <Card>
         <Card.Content style={{ gap: 6 }}>
           <Text variant="titleMedium">요약</Text>
           <Text>날짜: {date}</Text>
           <Text>주제: {topics.length ? topics.join(", ") : "-"}</Text>
           <Text>에너지: {energyObj ? energyObj.label : "-"}</Text>
-          <Text>기분: {selectedMood ? `${selectedMood.en} (${selectedMood.ko})` : "-"}</Text>
+          <Text>기분: {mood ? mood : "-"}</Text>
+          <Text>기분점수: {moodScore ? `${moodScore}/5` : "-"}</Text>
         </Card.Content>
       </Card>
 

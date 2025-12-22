@@ -5,6 +5,26 @@ import RootNavigator from "../navigation/RootNavigator";
 import { AuthProvider } from "./AuthProvider";
 import QueryProvider from "./QueryProvider";
 
+import { config, library } from "@fortawesome/fontawesome-svg-core";
+import "@fortawesome/fontawesome-svg-core/styles.css";
+config.autoAddCss = false;
+
+import {
+  faFaceSadTear,
+  faFaceTired,
+  faFaceMeh,
+  faFaceSmileWink,
+  faFaceLaughBeam,
+} from "@fortawesome/free-solid-svg-icons";
+
+library.add(
+  faFaceSadTear,
+  faFaceTired,
+  faFaceMeh,
+  faFaceSmileWink,
+  faFaceLaughBeam
+);
+
 export default function AppProviders() {
   return (
     <QueryProvider>
