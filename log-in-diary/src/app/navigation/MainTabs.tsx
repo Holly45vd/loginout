@@ -1,33 +1,144 @@
-// /workspaces/loginout/log-in-diary/src/app/navigation/MainTabs.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Pressable, Animated, Easing, Platform } from "react-native";
+import { View, Pressable, Animated, Easing } from "react-native";
 import {
   createBottomTabNavigator,
   BottomTabBarProps,
 } from "@react-navigation/bottom-tabs";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Text } from "react-native-paper";
-
-// ✅ Expo 프로젝트에서는 이게 정답
 import { MaterialIcons } from "@expo/vector-icons";
 
 import HomeScreen from "../../screens/home/HomeScreen";
 import CalendarScreen from "../../screens/calendar/CalendarScreen";
+import DayDetailScreen from "../../screens/calendar/DayDetailScreen";
 import EntryEditorScreen from "../../screens/entry/EntryEditorScreen";
 import ReportScreen from "../../screens/report/ReportScreen";
 import ProfileScreen from "../../screens/profile/ProfileScreen";
 
+// ✅ 기존 경로 그대로 (너 RootNavigator에 있던 경로)
+import RecentDiaryListScreen from "../../screens/home/components/RecentDiaryListScreen";
+
 const Tab = createBottomTabNavigator();
 
-// ✅ MUI 느낌(Material Icons)으로 아이콘 매핑
-// (MaterialIcons glyph는 문자열 리터럴로 충분히 잘 잡힘)
+/** =========================
+ *  Stack Param Lists
+ *  ========================= */
+export type HomeStackParamList = {
+  Home: undefined;
+  RecentDiaryList: undefined;
+};
+
+export type CalendarStackParamList = {
+  Calendar: undefined;
+  DayDetail: { date: string };
+  EntryEditor: { date?: string } | undefined;
+};
+
+export type WriteStackParamList = {
+  WriteHome: undefined;
+  EntryEditor: { date?: string } | undefined;
+};
+
+const HomeStack = createNativeStackNavigator<HomeStackParamList>();
+const CalendarStack = createNativeStackNavigator<CalendarStackParamList>();
+const WriteStack = createNativeStackNavigator<WriteStackParamList>();
+
+/** =========================
+ *  Home Stack (탭 유지)
+ *  ========================= */
+function HomeStackNavigator() {
+  return (
+    <HomeStack.Navigator>
+      <HomeStack.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{ headerShown: false }}
+      />
+      <HomeStack.Screen
+        name="RecentDiaryList"
+        component={RecentDiaryListScreen}
+        options={{
+          headerShown: true,
+          title: "최근 나의 일기",
+          headerBackTitleVisible: false,
+        }}
+      />
+    </HomeStack.Navigator>
+  );
+}
+
+/** =========================
+ *  Calendar Stack (DayDetail / EntryEditor push)
+ *  ========================= */
+function CalendarStackNavigator() {
+  return (
+    <CalendarStack.Navigator>
+      <CalendarStack.Screen
+        name="Calendar"
+        component={CalendarScreen}
+        options={{ headerShown: false }}
+      />
+      <CalendarStack.Screen
+        name="DayDetail"
+        component={DayDetailScreen}
+        options={{
+          headerShown: true,
+          title: "일기 상세",
+          headerBackTitleVisible: false,
+        }}
+      />
+      <CalendarStack.Screen
+        name="EntryEditor"
+        component={EntryEditorScreen}
+        options={{
+          headerShown: true,
+          title: "일기 작성/수정",
+          headerBackTitleVisible: false,
+        }}
+      />
+    </CalendarStack.Navigator>
+  );
+}
+
+/** =========================
+ *  Write Stack (탭 “기록”에서 EntryEditor 진입)
+ *  ========================= */
+function WriteStackNavigator() {
+  // 탭 “기록”을 눌렀을 때 바로 EntryEditor를 보여주고 싶으면
+  // WriteHome 없이 EntryEditor만 두는 방법도 있는데,
+  // RN Navigation 구조상 스택 첫 화면이 필요해서 이렇게 둠.
+  return (
+    <WriteStack.Navigator>
+      <WriteStack.Screen
+        name="WriteHome"
+        component={EntryEditorScreen}
+        options={{ headerShown: false }}
+        initialParams={undefined}
+      />
+      <WriteStack.Screen
+        name="EntryEditor"
+        component={EntryEditorScreen}
+        options={{
+          headerShown: true,
+          title: "일기 작성/수정",
+          headerBackTitleVisible: false,
+        }}
+      />
+    </WriteStack.Navigator>
+  );
+}
+
+/** =========================
+ *  Floating TabBar (MUI 느낌)
+ *  ========================= */
 const TAB_META: Record<
   string,
   { label: string; icon: React.ComponentProps<typeof MaterialIcons>["name"] }
 > = {
   Home: { label: "홈", icon: "home" },
-  Calendar: { label: "캘린더", icon: "calendar-today" },
-  Write: { label: "기록", icon: "edit" }, // "edit-note"가 없을 수 있어 안전하게 "edit"
-  Report: { label: "리포트", icon: "insert-chart" }, // outlined 필요하면 "insert-chart-outlined" 시도 가능
+  CalendarTab: { label: "캘린더", icon: "calendar-today" },
+  WriteTab: { label: "기록", icon: "edit" },
+  Report: { label: "리포트", icon: "insert-chart" },
   Profile: { label: "내정보", icon: "account-circle" },
 };
 
@@ -48,7 +159,6 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   useEffect(() => {
     if (!tabWidth) return;
     const to = state.index * (tabWidth + GAP);
-
     Animated.timing(pillX, {
       toValue: to,
       duration: 260,
@@ -57,7 +167,6 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
     }).start();
   }, [state.index, tabWidth, pillX]);
 
-  // 눌림(press) 스케일 애니메이션: per-tab
   const pressMapRef = useRef<Record<string, Animated.Value>>({});
   routes.forEach((r) => {
     if (!pressMapRef.current[r.key]) {
@@ -98,7 +207,6 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
           height: 44,
         }}
       >
-        {/* ✅ 슬라이딩 pill */}
         {tabWidth > 0 && (
           <Animated.View
             pointerEvents="none"
@@ -118,8 +226,7 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
         {routes.map((route, index) => {
           const isFocused = state.index === index;
           const meta =
-            TAB_META[route.name] ??
-            ({ label: route.name, icon: "circle" } as any);
+            TAB_META[route.name] ?? ({ label: route.name, icon: "circle" } as any);
 
           const press = pressMapRef.current[route.key];
 
@@ -147,7 +254,6 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
               target: route.key,
               canPreventDefault: true,
             });
-
             if (!isFocused && !event.defaultPrevented) {
               navigation.navigate(route.name as never);
             }
@@ -180,13 +286,7 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
                 />
 
                 {isFocused ? (
-                  <Text
-                    style={{
-                      color: "#fff",
-                      fontSize: 12,
-                      fontWeight: "700",
-                    }}
-                  >
+                  <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>
                     {meta.label}
                   </Text>
                 ) : null}
@@ -199,18 +299,27 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
+/** =========================
+ *  MainTabs
+ *  ========================= */
 export default function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { display: "none" },
+        tabBarStyle: { display: "none" }, // 기본 탭바 숨김
       }}
       tabBar={(props) => <FloatingTabBar {...props} />}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Calendar" component={CalendarScreen} />
-      <Tab.Screen name="Write" component={EntryEditorScreen} />
+      {/* ✅ Home 탭도 Stack으로 */}
+      <Tab.Screen name="Home" component={HomeStackNavigator} />
+
+      {/* ✅ Calendar 탭: DayDetail/EntryEditor push해도 탭 유지 */}
+      <Tab.Screen name="CalendarTab" component={CalendarStackNavigator} />
+
+      {/* ✅ 기록 탭: 일기 작성 진입 */}
+      <Tab.Screen name="WriteTab" component={WriteStackNavigator} />
+
       <Tab.Screen name="Report" component={ReportScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>

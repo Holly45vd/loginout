@@ -73,8 +73,8 @@ export default function DayDetailScreen({ navigation, route }: any) {
   }, [data?.mood]);
 
   const heroImgSource = useMemo(() => {
-    if (!hasData) return moodImg.normal ?? DEFAULT_MOOD_IMAGE;
-    return moodImg.active ?? moodImg.normal ?? DEFAULT_MOOD_IMAGE;
+    if (!hasData) return (moodImg as any).normal ?? DEFAULT_MOOD_IMAGE;
+    return (moodImg as any).active ?? (moodImg as any).normal ?? DEFAULT_MOOD_IMAGE;
   }, [hasData, moodImg]);
 
   const topic = data?.topic || "-";
@@ -86,11 +86,18 @@ export default function DayDetailScreen({ navigation, route }: any) {
   const createdAt = fmtDateTime(data?.createdAt);
   const updatedAt = fmtDateTime(data?.updatedAt);
 
-  /** ✅ 핵심: 탭 네비게이터(부모)로 Write 이동 */
-const goEdit = () => {
-  navigation.navigate("EntryEditor", { date });
-};
-
+  /**
+   * ✅ 핵심 수정:
+   * DayDetail은 RootStack에 있고,
+   * EntryEditor는 Tab(MainTabs)의 "Write" 탭이므로
+   * RootStack의 Main -> Tab의 Write로 이동해야 함
+   */
+  const goEdit = () => {
+    navigation.navigate("Main", {
+      screen: "Write",
+      params: { date },
+    });
+  };
 
   if (!user) {
     return (
@@ -112,14 +119,14 @@ const goEdit = () => {
     <ScrollView
       contentContainerStyle={{
         padding: 16,
-        paddingBottom: 120,
+        paddingBottom: 140, // ✅ 플로팅 탭바에 버튼 안 먹히게 여유
         gap: 14,
       }}
     >
-      {/* ===== HERO 영역 (기분 큰 이미지 + 우상단 수정 아이콘) ===== */}
-
-        <Card.Content style={{ paddingVertical: 18, gap: 10 }}>
-          {/* ✅ 우상단 아이콘 버튼 */}
+      {/* ===== HERO 카드 ===== */}
+      <Card style={{ borderRadius: 22, overflow: "hidden" }}>
+        <Card.Content style={{ paddingVertical: 18, gap: 10, minHeight: 160 }}>
+          {/* ✅ 우상단 수정 아이콘 (기록 있으면 수정, 없으면 기록) */}
           <View
             style={{
               position: "absolute",
@@ -136,10 +143,9 @@ const goEdit = () => {
               }}
             >
               <IconButton
-                icon="pencil"
+                icon={hasData ? "pencil" : "plus"}
                 size={20}
                 onPress={goEdit}
-                disabled={!hasData} // 기록 없으면 수정 불가
               />
             </Surface>
           </View>
@@ -162,6 +168,7 @@ const goEdit = () => {
             {moodScore ? ` · 점수 ${moodScore}/5` : ""}
           </Text>
 
+          {/* ✅ 기분 아이콘 크게 */}
           <Image
             source={heroImgSource}
             resizeMode="contain"
@@ -169,14 +176,14 @@ const goEdit = () => {
               position: "absolute",
               right: -10,
               bottom: -18,
-              width: 180,
-              height: 180,
-              opacity: 0.26,
+              width: 190,
+              height: 190,
+              opacity: 0.28,
               transform: [{ rotate: "-8deg" }],
             }}
           />
 
-          {/* 기록 없을 때는 “기록하기” 버튼만 노출 */}
+          {/* 기록 없을 때만 큰 버튼(선택사항) */}
           {!hasData && (
             <Button
               mode="contained"
@@ -188,7 +195,7 @@ const goEdit = () => {
             </Button>
           )}
         </Card.Content>
-
+      </Card>
 
       {/* ===== 정보 + 내용 ===== */}
       <Card style={{ borderRadius: 22 }}>
