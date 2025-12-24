@@ -3,6 +3,7 @@ import { View, ScrollView } from "react-native";
 import dayjs from "dayjs";
 import { useQuery } from "@tanstack/react-query";
 import { Text } from "react-native-paper";
+import { Avatar, IconButton, Surface } from "react-native-paper";
 
 import { useAuth } from "../../app/providers/AuthProvider";
 import { getEntry, listEntriesByRange } from "../../data/firebase/diaryRepo";
@@ -138,7 +139,7 @@ export default function HomeScreen({ navigation }: any) {
     });
   }, [d14Entries, d14Start]);
 
-  // 최근 나의 일기 캐러셀(최근 6개) - 디자인은 나중
+  // 최근 나의 일기 캐러셀(최근 6개)
   const recentCards = useMemo(() => {
     const list = (d14Entries ?? [])
       .slice()
@@ -159,7 +160,78 @@ export default function HomeScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 96, gap: 14 }}
       >
-        {/* 1) 명언 토글 + 카드 */}
+
+        {/* ✅ 상단 헤더 */}
+<Surface
+  elevation={0}
+  style={{
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+  }}
+>
+  <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+    {/* 프로필 동그라미 */}
+    {user?.photoURL ? (
+      <Avatar.Image size={44} source={{ uri: user.photoURL }} />
+    ) : (
+      <Avatar.Text size={44} label={(user?.displayName?.[0] ?? "H").toUpperCase()} />
+    )}
+
+    <View style={{ gap: 2 }}>
+      <Text style={{ fontSize: 16, fontWeight: "900" as any }}>
+        Hello {user?.displayName ?? "Holly"}
+      </Text>
+      <Text style={{ opacity: 0.65 }}>
+        Today {dayjs().format("D MMM")}
+      </Text>
+    </View>
+  </View>
+
+  {/* 오른쪽 아이콘들 */}
+  <View style={{ flexDirection: "row", alignItems: "center" }}>
+    <IconButton
+      icon="magnify"
+      size={22}
+      onPress={() => navigation.navigate("Search")} // 없으면 일단 주석
+    />
+    <IconButton
+      icon="cog-outline"
+      size={22}
+      onPress={() => navigation.navigate("MyPage")} // 너 프로젝트에 MyPage 있으면 이걸로
+    />
+  </View>
+</Surface>
+
+
+      
+        {/* 2) 오늘의 일기 */}
+      <TodayEntryCard
+  todayMMDD={todayMMDD}
+  loading={loadingToday}
+  hasEntry={hasToday}
+  moodIcon={todayMoodIcon}
+  energyText={todayEnergy}
+  note={todayNote}
+  onGoDetail={() => {
+    const parent = navigation.getParent?.();
+    (parent ?? navigation).navigate("CalendarTab", {
+      screen: "DayDetail",
+      params: { date: todayId },
+    });
+  }}
+  onGoWrite={() => {
+    const parent = navigation.getParent?.();
+    (parent ?? navigation).navigate("WriteTab", {
+      screen: "WriteHome",
+      params: { date: todayId },
+    });
+  }}
+/>
+
+          {/* 1) 명언 */}
         <QuoteCard
           quoteOpen={quoteOpen}
           onToggle={async () => {
@@ -179,34 +251,28 @@ export default function HomeScreen({ navigation }: any) {
           quoteAuthor={dailyQuote?.author}
         />
 
-        {/* 2) 오늘의 일기: 있으면 버튼 숨김 + 카드 탭으로 디테일 */}
-        <TodayEntryCard
-          todayMMDD={todayMMDD}
-          loading={loadingToday}
-          hasEntry={hasToday}
-          moodIcon={todayMoodIcon}
-          energyText={todayEnergy}
-          note={todayNote}
-          // ✅ 전역 DayDetail로 바로 이동
-          onGoDetail={() => navigation.navigate("DayDetail", { date: todayId })}
-          onGoWrite={() => navigation.navigate("Write", { date: todayId })}
-        />
 
-        {/* 3) 미니 캘린더: 요일만 */}
+        {/* 3) 미니 캘린더 */}
         <MiniWeekCalendar
           weekStart={weekStart}
           todayId={todayId}
           loading={loadingMini}
           miniEntries={(miniEntries ?? []) as any}
           moodIconMap={MOOD_ICON}
-          onGoCalendar={() => navigation.navigate("Calendar")}
-          // ✅ 전역 DayDetail로 바로 이동
+          onGoCalendar={() =>
+            navigation.navigate("CalendarTab", {
+              screen: "Calendar",
+            })
+          }
           onGoDayDetail={(dateId) =>
-            navigation.navigate("DayDetail", { date: dateId })
+            navigation.navigate("CalendarTab", {
+              screen: "DayDetail",
+              params: { date: dateId },
+            })
           }
         />
 
-        {/* 4) 최근 에너지: 그래프 크게 */}
+        {/* 4) 최근 에너지 */}
         <EnergyCard
           loading={loading14}
           values={energy14Values}
@@ -218,9 +284,11 @@ export default function HomeScreen({ navigation }: any) {
           loading={loading14}
           cards={recentCards}
           onGoMore={() => navigation.navigate("RecentDiaryList")}
-          // ✅ 전역 DayDetail로 바로 이동
           onGoDayDetail={(dateId) =>
-            navigation.navigate("DayDetail", { date: dateId })
+            navigation.navigate("CalendarTab", {
+              screen: "DayDetail",
+              params: { date: dateId },
+            })
           }
         />
       </ScrollView>

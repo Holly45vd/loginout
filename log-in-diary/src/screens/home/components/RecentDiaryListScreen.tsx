@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, ScrollView, Pressable } from "react-native";
 import dayjs from "dayjs";
 import { useQuery } from "@tanstack/react-query";
@@ -7,7 +7,6 @@ import { Card, Text, Chip } from "react-native-paper";
 import { useAuth } from "../../../app/providers/AuthProvider";
 import { listEntriesByRange } from "../../../data/firebase/diaryRepo";
 
-// mood 키 -> 이모지 매핑
 const MOOD_ICON: Record<string, string> = {
   anxiety: "🌩️",
   coldness: "☁️",
@@ -42,8 +41,8 @@ const DOW = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 type Item = {
   dateId: string;
-  title: string;   // 예: "12.19 (금)"
-  time: string;    // 예: "09:00" (없으면 "--:--")
+  title: string;
+  time: string;
   icon: string;
   energy: string;
   snippet: string;
@@ -55,8 +54,7 @@ export default function RecentDiaryListScreen({ navigation }: any) {
   const today = dayjs();
   const todayId = today.format("YYYY-MM-DD");
 
-  // ✅ 이미지처럼 “주간” 컨텍스트 + 그 주의 기록 타임라인 느낌 추천
-  const weekStart = today.startOf("week"); // 일요일 시작
+  const weekStart = today.startOf("week");
   const weekEnd = weekStart.add(6, "day");
 
   const rangeStart = weekStart.format("YYYY-MM-DD");
@@ -71,23 +69,32 @@ export default function RecentDiaryListScreen({ navigation }: any) {
     staleTime: 60_000,
   });
 
-  // ✅ “선택된 카드” 강조(파란 카드). 기본은 최신(오늘/가장 최근)으로.
   const items: Item[] = useMemo(() => {
-    const list = (entries ?? []).slice().sort((a: any, b: any) => (a.date < b.date ? 1 : -1)); // 최신순
+    const list = (entries ?? [])
+      .slice()
+      .sort((a: any, b: any) => (a.date < b.date ? 1 : -1));
     return list.map((e: any) => ({
       dateId: e.date,
       title: dayjs(e.date).format("MM.DD (dd)"),
-      time: e.time ? String(e.time) : "--:--", // time 필드가 없으면 표시만
+      time: e.time ? String(e.time) : "--:--",
       icon: MOOD_ICON[e.mood] ?? "🙂",
       energy: energyLabel(e.energy),
       snippet: String(e.content ?? "").trim(),
     }));
   }, [entries]);
 
-  const defaultSelected = items.find((x) => x.dateId === todayId)?.dateId ?? items[0]?.dateId ?? "";
+  const defaultSelected =
+    items.find((x) => x.dateId === todayId)?.dateId ?? items[0]?.dateId ?? "";
   const [selectedId, setSelectedId] = useState(defaultSelected);
 
-  const headerDateText = today.format("MMM D, YYYY"); // 영어가 싫으면 포맷 바꿔도 됨
+  useEffect(() => {
+    if (!selectedId && defaultSelected) setSelectedId(defaultSelected);
+    if (selectedId && !items.some((x) => x.dateId === selectedId)) {
+      setSelectedId(defaultSelected);
+    }
+  }, [defaultSelected, items, selectedId]);
+
+  const headerDateText = today.format("MMM D, YYYY");
 
   if (!user) {
     return (
@@ -100,11 +107,11 @@ export default function RecentDiaryListScreen({ navigation }: any) {
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28 }}>
-        {/* ===== Header ===== */}
         <Text style={{ opacity: 0.6, marginBottom: 4 }}>{headerDateText}</Text>
-        <Text style={{ fontSize: 34, fontWeight: "900" as any, marginBottom: 14 }}>Today</Text>
+        <Text style={{ fontSize: 34, fontWeight: "900" as any, marginBottom: 14 }}>
+          Today
+        </Text>
 
-        {/* ===== Week Strip ===== */}
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 18 }}>
           {Array.from({ length: 7 }).map((_, i) => {
             const d = weekStart.add(i, "day");
@@ -132,7 +139,6 @@ export default function RecentDiaryListScreen({ navigation }: any) {
           })}
         </View>
 
-        {/* ===== Timeline List ===== */}
         {isLoading ? (
           <Card style={{ borderRadius: 18 }}>
             <Card.Content style={{ paddingVertical: 22, alignItems: "center" }}>
@@ -148,12 +154,11 @@ export default function RecentDiaryListScreen({ navigation }: any) {
           </Card>
         ) : (
           <View style={{ gap: 12 }}>
-            {items.map((it, idx) => {
+            {items.map((it) => {
               const selected = it.dateId === selectedId;
 
               return (
                 <View key={it.dateId} style={{ flexDirection: "row", alignItems: "stretch" }}>
-                  {/* Left rail */}
                   <View style={{ width: 28, alignItems: "center" }}>
                     <View
                       style={{
@@ -176,7 +181,6 @@ export default function RecentDiaryListScreen({ navigation }: any) {
                     />
                   </View>
 
-                  {/* Right content */}
                   <View style={{ flex: 1 }}>
                     <Text style={{ opacity: 0.55, fontWeight: "800" as any, marginBottom: 6 }}>
                       {it.time}
@@ -184,8 +188,12 @@ export default function RecentDiaryListScreen({ navigation }: any) {
 
                     <Pressable
                       onPress={() => {
-                        setSelectedId(it.dateId); // 선택 강조
-                        navigation.navigate("DayDetail", { date: it.dateId }); // 상세 이동
+                        setSelectedId(it.dateId);
+                        // ✅ DayDetail은 CalendarStack 안
+                        navigation.navigate("CalendarTab", {
+                          screen: "DayDetail",
+                          params: { date: it.dateId },
+                        });
                       }}
                     >
                       <View
@@ -196,12 +204,7 @@ export default function RecentDiaryListScreen({ navigation }: any) {
                         }}
                       >
                         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                          <Text
-                            style={{
-                              fontWeight: "900" as any,
-                              color: selected ? "#fff" : "#111",
-                            }}
-                          >
+                          <Text style={{ fontWeight: "900" as any, color: selected ? "#fff" : "#111" }}>
                             {it.title}
                           </Text>
                           <Chip

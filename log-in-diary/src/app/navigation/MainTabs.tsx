@@ -1,252 +1,92 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Pressable, Animated, Easing } from "react-native";
+import React, { useMemo, useRef } from "react";
+import { View, Pressable, Animated } from "react-native";
 import {
   createBottomTabNavigator,
   BottomTabBarProps,
 } from "@react-navigation/bottom-tabs";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { Text } from "react-native-paper";
 import { MaterialIcons } from "@expo/vector-icons";
+import { Text } from "react-native-paper";
 
 import HomeScreen from "../../screens/home/HomeScreen";
 import CalendarScreen from "../../screens/calendar/CalendarScreen";
-import DayDetailScreen from "../../screens/calendar/DayDetailScreen";
 import EntryEditorScreen from "../../screens/entry/EntryEditorScreen";
 import ReportScreen from "../../screens/report/ReportScreen";
 import ProfileScreen from "../../screens/profile/ProfileScreen";
 
-// ✅ 기존 경로 그대로 (너 RootNavigator에 있던 경로)
-import RecentDiaryListScreen from "../../screens/home/components/RecentDiaryListScreen";
-
-const Tab = createBottomTabNavigator();
-
-/** =========================
- *  Stack Param Lists
- *  ========================= */
-export type HomeStackParamList = {
-  Home: undefined;
-  RecentDiaryList: undefined;
+export type MainTabParamList = {
+  HomeTab: undefined;
+  CalendarTab: undefined;
+  WriteTab: { date?: string } | undefined;
+  ReportTab: undefined;
+  ProfileTab: undefined;
 };
 
-export type CalendarStackParamList = {
-  Calendar: undefined;
-  DayDetail: { date: string };
-  EntryEditor: { date?: string } | undefined;
-};
+const Tab = createBottomTabNavigator<MainTabParamList>();
 
-export type WriteStackParamList = {
-  WriteHome: undefined;
-  EntryEditor: { date?: string } | undefined;
-};
-
-const HomeStack = createNativeStackNavigator<HomeStackParamList>();
-const CalendarStack = createNativeStackNavigator<CalendarStackParamList>();
-const WriteStack = createNativeStackNavigator<WriteStackParamList>();
-
-/** =========================
- *  Home Stack (탭 유지)
- *  ========================= */
-function HomeStackNavigator() {
-  return (
-    <HomeStack.Navigator>
-      <HomeStack.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{ headerShown: false }}
-      />
-      <HomeStack.Screen
-        name="RecentDiaryList"
-        component={RecentDiaryListScreen}
-        options={{
-          headerShown: true,
-          title: "최근 나의 일기",
-          headerBackTitleVisible: false,
-        }}
-      />
-    </HomeStack.Navigator>
-  );
-}
-
-/** =========================
- *  Calendar Stack (DayDetail / EntryEditor push)
- *  ========================= */
-function CalendarStackNavigator() {
-  return (
-    <CalendarStack.Navigator>
-      <CalendarStack.Screen
-        name="Calendar"
-        component={CalendarScreen}
-        options={{ headerShown: false }}
-      />
-      <CalendarStack.Screen
-        name="DayDetail"
-        component={DayDetailScreen}
-        options={{
-          headerShown: true,
-          title: "일기 상세",
-          headerBackTitleVisible: false,
-        }}
-      />
-      <CalendarStack.Screen
-        name="EntryEditor"
-        component={EntryEditorScreen}
-        options={{
-          headerShown: true,
-          title: "일기 작성/수정",
-          headerBackTitleVisible: false,
-        }}
-      />
-    </CalendarStack.Navigator>
-  );
-}
-
-/** =========================
- *  Write Stack (탭 “기록”에서 EntryEditor 진입)
- *  ========================= */
-function WriteStackNavigator() {
-  // 탭 “기록”을 눌렀을 때 바로 EntryEditor를 보여주고 싶으면
-  // WriteHome 없이 EntryEditor만 두는 방법도 있는데,
-  // RN Navigation 구조상 스택 첫 화면이 필요해서 이렇게 둠.
-  return (
-    <WriteStack.Navigator>
-      <WriteStack.Screen
-        name="WriteHome"
-        component={EntryEditorScreen}
-        options={{ headerShown: false }}
-        initialParams={undefined}
-      />
-      <WriteStack.Screen
-        name="EntryEditor"
-        component={EntryEditorScreen}
-        options={{
-          headerShown: true,
-          title: "일기 작성/수정",
-          headerBackTitleVisible: false,
-        }}
-      />
-    </WriteStack.Navigator>
-  );
-}
-
-/** =========================
- *  Floating TabBar (MUI 느낌)
- *  ========================= */
-const TAB_META: Record<
-  string,
-  { label: string; icon: React.ComponentProps<typeof MaterialIcons>["name"] }
-> = {
-  Home: { label: "홈", icon: "home" },
-  CalendarTab: { label: "캘린더", icon: "calendar-today" },
-  WriteTab: { label: "기록", icon: "edit" },
-  Report: { label: "리포트", icon: "insert-chart" },
-  Profile: { label: "내정보", icon: "account-circle" },
-};
-
-function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
-  const routes = state.routes;
-  const n = routes.length;
-
-  const [innerWidth, setInnerWidth] = useState(0);
+function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const w = 74;
   const pillX = useRef(new Animated.Value(0)).current;
 
-  const GAP = 10;
+  const routeCount = state.routes.length;
+  const pillWidth = useMemo(() => w, []);
+  const containerWidth = useMemo(() => routeCount * w, [routeCount]);
 
-  const tabWidth = useMemo(() => {
-    if (!innerWidth || n === 0) return 0;
-    return (innerWidth - GAP * (n - 1)) / n;
-  }, [innerWidth, n]);
-
-  useEffect(() => {
-    if (!tabWidth) return;
-    const to = state.index * (tabWidth + GAP);
-    Animated.timing(pillX, {
-      toValue: to,
-      duration: 260,
-      easing: Easing.out(Easing.cubic),
+  React.useEffect(() => {
+    Animated.spring(pillX, {
+      toValue: state.index * w,
       useNativeDriver: true,
+      bounciness: 10,
+      speed: 14,
     }).start();
-  }, [state.index, tabWidth, pillX]);
-
-  const pressMapRef = useRef<Record<string, Animated.Value>>({});
-  routes.forEach((r) => {
-    if (!pressMapRef.current[r.key]) {
-      pressMapRef.current[r.key] = new Animated.Value(1);
-    }
-  });
-
-  const activeBg = "rgba(40,40,160,0.95)";
-  const inactiveIcon = "rgba(0,0,0,0.55)";
+  }, [state.index, w, pillX]);
 
   return (
     <View
       style={{
         position: "absolute",
-        left: 16,
-        right: 16,
-        bottom: 16,
-        borderRadius: 24,
-        paddingVertical: 10,
-        paddingHorizontal: 10,
-        backgroundColor: "rgba(255,255,255,0.96)",
-        borderWidth: 1,
-        borderColor: "rgba(0,0,0,0.06)",
-        shadowColor: "#000",
-        shadowOpacity: 0.12,
-        shadowRadius: 14,
-        shadowOffset: { width: 0, height: 6 },
-        elevation: 8,
+        left: 0,
+        right: 0,
+        bottom: 18,
+        alignItems: "center",
       }}
+      pointerEvents="box-none"
     >
       <View
-        onLayout={(e) => setInnerWidth(e.nativeEvent.layout.width)}
         style={{
+          width: containerWidth,
+          height: 58,
+          borderRadius: 20,
+          backgroundColor: "rgba(255,255,255,0.92)",
+          borderWidth: 1,
+          borderColor: "rgba(0,0,0,0.08)",
+          // ✅ RN Web 경고: shadow* 대신 boxShadow
+          boxShadow: "0px 8px 24px rgba(0,0,0,0.12)",
+          overflow: "hidden",
           flexDirection: "row",
-          alignItems: "center",
-          gap: GAP,
-          position: "relative",
-          height: 44,
         }}
       >
-        {tabWidth > 0 && (
-          <Animated.View
-            pointerEvents="none"
-            style={{
-              position: "absolute",
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: tabWidth,
-              borderRadius: 16,
-              backgroundColor: activeBg,
-              transform: [{ translateX: pillX }],
-            }}
-          />
-        )}
+        <Animated.View
+          style={{
+            position: "absolute",
+            width: pillWidth,
+            height: 50,
+            top: 4,
+            left: 4,
+            borderRadius: 16,
+            backgroundColor: "rgba(40,40,160,0.10)",
+            transform: [{ translateX: pillX }],
+          }}
+        />
 
-        {routes.map((route, index) => {
+        {state.routes.map((route, index) => {
           const isFocused = state.index === index;
-          const meta =
-            TAB_META[route.name] ?? ({ label: route.name, icon: "circle" } as any);
-
-          const press = pressMapRef.current[route.key];
-
-          const onPressIn = () => {
-            Animated.spring(press, {
-              toValue: 0.96,
-              friction: 7,
-              tension: 130,
-              useNativeDriver: true,
-            }).start();
-          };
-
-          const onPressOut = () => {
-            Animated.spring(press, {
-              toValue: 1,
-              friction: 7,
-              tension: 110,
-              useNativeDriver: true,
-            }).start();
-          };
+          const { options } = descriptors[route.key];
+          const label =
+            options.tabBarLabel !== undefined
+              ? options.tabBarLabel
+              : options.title !== undefined
+              ? options.title
+              : route.name;
 
           const onPress = () => {
             const event = navigation.emit({
@@ -254,6 +94,7 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
               target: route.key,
               canPreventDefault: true,
             });
+
             if (!isFocused && !event.defaultPrevented) {
               navigation.navigate(route.name as never);
             }
@@ -263,34 +104,30 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
             <Pressable
               key={route.key}
               onPress={onPress}
-              onPressIn={onPressIn}
-              onPressOut={onPressOut}
-              style={{ flex: 1 }}
+              style={{
+                width: w,
+                height: 58,
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 10,
+              }}
             >
-              <Animated.View
-                style={{
-                  height: 44,
-                  borderRadius: 16,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexDirection: "row",
-                  gap: isFocused ? 8 : 0,
-                  paddingHorizontal: isFocused ? 12 : 0,
-                  transform: [{ scale: press }],
-                }}
-              >
-                <MaterialIcons
-                  name={meta.icon}
-                  size={isFocused ? 24 : 22}
-                  color={isFocused ? "#fff" : inactiveIcon}
-                />
-
-                {isFocused ? (
-                  <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>
-                    {meta.label}
-                  </Text>
-                ) : null}
-              </Animated.View>
+              {options.tabBarIcon
+                ? options.tabBarIcon({
+                    focused: isFocused,
+                    color: "#222",
+                    size: 24,
+                  })
+                : null}
+              {isFocused ? (
+                <Text
+                  style={{ marginTop: 2, fontSize: 12, fontWeight: "700" }}
+                >
+                  {String(label).replace("Tab", "")}
+                </Text>
+              ) : (
+                <View style={{ height: 16 }} />
+              )}
             </Pressable>
           );
         })}
@@ -299,29 +136,85 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
-/** =========================
- *  MainTabs
- *  ========================= */
 export default function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { display: "none" }, // 기본 탭바 숨김
+        tabBarStyle: { display: "none" },
       }}
       tabBar={(props) => <FloatingTabBar {...props} />}
     >
-      {/* ✅ Home 탭도 Stack으로 */}
-      <Tab.Screen name="Home" component={HomeStackNavigator} />
-
-      {/* ✅ Calendar 탭: DayDetail/EntryEditor push해도 탭 유지 */}
-      <Tab.Screen name="CalendarTab" component={CalendarStackNavigator} />
-
-      {/* ✅ 기록 탭: 일기 작성 진입 */}
-      <Tab.Screen name="WriteTab" component={WriteStackNavigator} />
-
-      <Tab.Screen name="Report" component={ReportScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen
+        name="HomeTab"
+        component={HomeScreen}
+        options={{
+          title: "Home",
+          tabBarIcon: ({ focused, size }) => (
+            <MaterialIcons
+              name="home"
+              size={size ?? 24}
+              color={focused ? "#2b2bb8" : "#222"}
+            />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="CalendarTab"
+        component={CalendarScreen}
+        options={{
+          title: "Calendar",
+          tabBarIcon: ({ focused, size }) => (
+            <MaterialIcons
+              name="calendar-month"
+              size={size ?? 24}
+              color={focused ? "#2b2bb8" : "#222"}
+            />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="WriteTab"
+        component={EntryEditorScreen}
+        options={{
+          title: "Write",
+          tabBarIcon: ({ focused, size }) => (
+            <MaterialIcons
+              name="edit"
+              size={size ?? 24}
+              color={focused ? "#2b2bb8" : "#222"}
+            />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="ReportTab"
+        component={ReportScreen}
+        options={{
+          title: "Report",
+          tabBarIcon: ({ focused, size }) => (
+            <MaterialIcons
+              name="analytics"
+              size={size ?? 24}
+              color={focused ? "#2b2bb8" : "#222"}
+            />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="ProfileTab"
+        component={ProfileScreen}
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ focused, size }) => (
+            <MaterialIcons
+              name="person"
+              size={size ?? 24}
+              color={focused ? "#2b2bb8" : "#222"}
+            />
+          ),
+        }}
+      />
     </Tab.Navigator>
   );
 }

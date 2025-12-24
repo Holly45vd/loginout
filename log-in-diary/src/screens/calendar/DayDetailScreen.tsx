@@ -1,13 +1,6 @@
 import React, { useMemo } from "react";
 import { View, ScrollView, Image } from "react-native";
-import {
-  Button,
-  Card,
-  Divider,
-  Text,
-  Surface,
-  IconButton,
-} from "react-native-paper";
+import { Button, Card, Divider, Text, Surface, IconButton } from "react-native-paper";
 import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
 
@@ -15,7 +8,6 @@ import { useAuth } from "../../app/providers/AuthProvider";
 import { getEntry } from "../../data/firebase/diaryRepo";
 import { MOOD_IMAGE, DEFAULT_MOOD_IMAGE } from "../../assets/moodImages";
 
-/** Firestore Timestamp | Date | string -> JS Date 또는 null */
 function toSafeDate(v: any): Date | null {
   if (!v) return null;
   try {
@@ -86,18 +78,14 @@ export default function DayDetailScreen({ navigation, route }: any) {
   const createdAt = fmtDateTime(data?.createdAt);
   const updatedAt = fmtDateTime(data?.updatedAt);
 
-  /**
-   * ✅ 핵심 수정:
-   * DayDetail은 RootStack에 있고,
-   * EntryEditor는 Tab(MainTabs)의 "Write" 탭이므로
-   * RootStack의 Main -> Tab의 Write로 이동해야 함
-   */
-  const goEdit = () => {
-    navigation.navigate("Main", {
-      screen: "Write",
-      params: { date },
-    });
-  };
+  // ✅ 수정은 WriteTab(WriteStack)의 WriteHome(=EntryEditor)로 이동
+const goEdit = () => {
+  navigation.navigate("Main", {
+    screen: "WriteTab",
+    params: { date },
+  });
+};
+
 
   if (!user) {
     return (
@@ -116,37 +104,15 @@ export default function DayDetailScreen({ navigation, route }: any) {
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={{
-        padding: 16,
-        paddingBottom: 140, // ✅ 플로팅 탭바에 버튼 안 먹히게 여유
-        gap: 14,
-      }}
-    >
-      {/* ===== HERO 카드 ===== */}
+    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 140, gap: 14 }}>
       <Card style={{ borderRadius: 22, overflow: "hidden" }}>
         <Card.Content style={{ paddingVertical: 18, gap: 10, minHeight: 160 }}>
-          {/* ✅ 우상단 수정 아이콘 (기록 있으면 수정, 없으면 기록) */}
-          <View
-            style={{
-              position: "absolute",
-              top: 10,
-              right: 10,
-              zIndex: 5,
-            }}
-          >
+          <View style={{ position: "absolute", top: 10, right: 10, zIndex: 5 }}>
             <Surface
               elevation={1}
-              style={{
-                borderRadius: 999,
-                backgroundColor: "rgba(255,255,255,0.95)",
-              }}
+              style={{ borderRadius: 999, backgroundColor: "rgba(255,255,255,0.95)" }}
             >
-              <IconButton
-                icon={hasData ? "pencil" : "plus"}
-                size={20}
-                onPress={goEdit}
-              />
+              <IconButton icon={hasData ? "pencil" : "plus"} size={20} onPress={goEdit} />
             </Surface>
           </View>
 
@@ -155,11 +121,7 @@ export default function DayDetailScreen({ navigation, route }: any) {
             {["일", "월", "화", "수", "목", "금", "토"][dayjs(date).day()]})
           </Text>
 
-          <Text
-            variant="headlineSmall"
-            style={{ fontWeight: "900" as any, letterSpacing: -0.2 }}
-            numberOfLines={2}
-          >
+          <Text variant="headlineSmall" style={{ fontWeight: "900" as any, letterSpacing: -0.2 }} numberOfLines={2}>
             기분 · {mood ? moodKo(mood) : "-"}
           </Text>
 
@@ -168,7 +130,6 @@ export default function DayDetailScreen({ navigation, route }: any) {
             {moodScore ? ` · 점수 ${moodScore}/5` : ""}
           </Text>
 
-          {/* ✅ 기분 아이콘 크게 */}
           <Image
             source={heroImgSource}
             resizeMode="contain"
@@ -183,7 +144,6 @@ export default function DayDetailScreen({ navigation, route }: any) {
             }}
           />
 
-          {/* 기록 없을 때만 큰 버튼(선택사항) */}
           {!hasData && (
             <Button
               mode="contained"
@@ -197,38 +157,17 @@ export default function DayDetailScreen({ navigation, route }: any) {
         </Card.Content>
       </Card>
 
-      {/* ===== 정보 + 내용 ===== */}
       <Card style={{ borderRadius: 22 }}>
         <Card.Content style={{ gap: 14 }}>
           <View style={{ flexDirection: "row", gap: 12 }}>
-            <Surface
-              elevation={0}
-              style={{
-                flex: 1,
-                borderRadius: 16,
-                padding: 12,
-                backgroundColor: "rgba(0,0,0,0.03)",
-              }}
-            >
+            <Surface elevation={0} style={{ flex: 1, borderRadius: 16, padding: 12, backgroundColor: "rgba(0,0,0,0.03)" }}>
               <Text style={{ opacity: 0.6 }}>에너지</Text>
-              <Text style={{ fontSize: 16, fontWeight: "800" as any }}>
-                {energyLabel(energyScore ?? undefined)}
-              </Text>
+              <Text style={{ fontSize: 16, fontWeight: "800" as any }}>{energyLabel(energyScore ?? undefined)}</Text>
             </Surface>
 
-            <Surface
-              elevation={0}
-              style={{
-                flex: 1,
-                borderRadius: 16,
-                padding: 12,
-                backgroundColor: "rgba(0,0,0,0.03)",
-              }}
-            >
+            <Surface elevation={0} style={{ flex: 1, borderRadius: 16, padding: 12, backgroundColor: "rgba(0,0,0,0.03)" }}>
               <Text style={{ opacity: 0.6 }}>기분 점수</Text>
-              <Text style={{ fontSize: 16, fontWeight: "800" as any }}>
-                {moodScore ? `${moodScore}/5` : "-"}
-              </Text>
+              <Text style={{ fontSize: 16, fontWeight: "800" as any }}>{moodScore ? `${moodScore}/5` : "-"}</Text>
             </Surface>
           </View>
 
@@ -240,7 +179,6 @@ export default function DayDetailScreen({ navigation, route }: any) {
         </Card.Content>
       </Card>
 
-      {/* ===== 등록/수정 날짜 ===== */}
       <Card style={{ borderRadius: 22 }}>
         <Card.Content style={{ gap: 10 }}>
           <View style={{ gap: 6 }}>
@@ -253,11 +191,7 @@ export default function DayDetailScreen({ navigation, route }: any) {
         </Card.Content>
       </Card>
 
-      <Button
-        mode="outlined"
-        onPress={() => navigation.goBack()}
-        style={{ borderRadius: 14 }}
-      >
+      <Button mode="outlined" onPress={() => navigation.goBack()} style={{ borderRadius: 14 }}>
         뒤로
       </Button>
     </ScrollView>
