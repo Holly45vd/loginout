@@ -21,11 +21,6 @@ export default function QuoteCard({
 }: Props) {
   return (
     <>
-      <View style={{ alignItems: "flex-end" }}>
-        <Button mode="outlined" compact onPress={onToggle}>
-          오늘의 명언 보기
-        </Button>
-      </View>
 
       {quoteOpen && (
         <Card style={{ borderRadius: 14, overflow: "hidden" }}>

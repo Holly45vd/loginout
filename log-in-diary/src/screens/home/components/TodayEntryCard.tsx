@@ -1,12 +1,13 @@
+// /workspaces/loginout/log-in-diary/src/screens/home/components/TodayEntryCard.tsx
 import React from "react";
-import { View, Pressable } from "react-native";
-import { Card, Button, Text } from "react-native-paper";
+import { View, Image } from "react-native";
+import { Card, Text, Button } from "react-native-paper";
 
 type Props = {
   todayMMDD: string;
   loading: boolean;
   hasEntry: boolean;
-  moodIcon: string;
+  moodImage: any;         // require(...) 결과
   energyText: string;
   note: string;
   onGoDetail: () => void;
@@ -17,45 +18,67 @@ export default function TodayEntryCard({
   todayMMDD,
   loading,
   hasEntry,
-  moodIcon,
+  moodImage,
   energyText,
   note,
   onGoDetail,
   onGoWrite,
 }: Props) {
-  const handlePress = () => {
-    // ✅ 있으면 디테일, 없으면 작성
-    if (hasEntry) onGoDetail();
-    else onGoWrite();
-  };
-
   return (
-    <Pressable onPress={handlePress}>
-      <Card style={{ borderRadius: 22 }}>
-        <Card.Content style={{ gap: 10 }}>
-          <Text style={{ opacity: 0.7 }}>Today {todayMMDD}</Text>
+    <Card style={{ borderRadius: 18, overflow: "hidden" }}>
+      <Card.Content style={{ paddingVertical: 16, gap: 10 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Text style={{ fontWeight: "900" as any, fontSize: 16 }}>오늘 ({todayMMDD})</Text>
+          <Text style={{ opacity: 0.7, fontWeight: "800" as any }}>
+            {hasEntry ? energyText : "-"}
+          </Text>
+        </View>
 
-          {loading ? (
-            <Text>불러오는 중...</Text>
-          ) : (
-            <>
-              <Text style={{ fontSize: 20, fontWeight: "900" as any }}>
-                {moodIcon} 오늘의 일기
-              </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <Image
+            source={moodImage}
+            resizeMode="contain"
+            style={{ width: 44, height: 44, opacity: hasEntry ? 1 : 0.5 }}
+          />
 
-              <Text style={{ opacity: 0.7 }}>에너지 · {energyText}</Text>
-
-              {!!note?.trim() && (
-                <Text numberOfLines={2} style={{ opacity: 0.85 }}>
-                  {note.trim()}
+          <View style={{ flex: 1 }}>
+            {loading ? (
+              <Text style={{ opacity: 0.6 }}>불러오는 중…</Text>
+            ) : hasEntry ? (
+              <>
+                <Text numberOfLines={2} style={{ fontWeight: "800" as any }}>
+                  {note?.trim() ? note.trim() : "(내용 없음)"}
                 </Text>
-              )}
+                <Text style={{ opacity: 0.6, marginTop: 2 }}>터치해서 디테일 보기</Text>
+              </>
+            ) : (
+              <>
+                <Text style={{ opacity: 0.7, fontWeight: "700" as any }}>
+                  아직 오늘 기록이 없어.
+                </Text>
+                <Text style={{ opacity: 0.6, marginTop: 2 }}>지금 가볍게 남겨보자.</Text>
+              </>
+            )}
+          </View>
+        </View>
 
-              
+        <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
+          {hasEntry ? (
+            <>
+              <Button mode="contained" onPress={onGoDetail} style={{ flex: 1, borderRadius: 14 }}>
+                디테일
+              </Button>
+              <Button mode="outlined" onPress={onGoWrite} style={{ flex: 1, borderRadius: 14 }}>
+                수정
+              </Button>
             </>
+          ) : (
+            <Button mode="contained" onPress={onGoWrite} style={{ flex: 1, borderRadius: 14 }}>
+              기록하기
+            </Button>
           )}
-        </Card.Content>
-      </Card>
-    </Pressable>
+        </View>
+      </Card.Content>
+    </Card>
   );
 }

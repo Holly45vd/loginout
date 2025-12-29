@@ -79,12 +79,8 @@ export default function DayDetailScreen({ navigation, route }: any) {
   const updatedAt = fmtDateTime(data?.updatedAt);
 
   // ✅ 수정은 WriteTab(WriteStack)의 WriteHome(=EntryEditor)로 이동
-const goEdit = () => {
-  navigation.navigate("Main", {
-    screen: "WriteTab",
-    params: { date },
-  });
-};
+const goEdit = () => navigation.navigate("WriteTab", { date });
+
 
 
   if (!user) {

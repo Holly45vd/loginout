@@ -1,3 +1,4 @@
+// /workspaces/loginout/log-in-diary/src/app/navigation/MainTabs.tsx
 import React, { useMemo, useRef } from "react";
 import { View, Pressable, Animated } from "react-native";
 import {
@@ -7,8 +8,8 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { Text } from "react-native-paper";
 
-import HomeScreen from "../../screens/home/HomeScreen";
-import CalendarScreen from "../../screens/calendar/CalendarScreen";
+import HomeStack from "./HomeStack";
+import CalendarStack from "./CalendarStack";
 import EntryEditorScreen from "../../screens/entry/EntryEditorScreen";
 import ReportScreen from "../../screens/report/ReportScreen";
 import ProfileScreen from "../../screens/profile/ProfileScreen";
@@ -59,7 +60,7 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           backgroundColor: "rgba(255,255,255,0.92)",
           borderWidth: 1,
           borderColor: "rgba(0,0,0,0.08)",
-          // ✅ RN Web 경고: shadow* 대신 boxShadow
+          // RN Web: shadow 대신 boxShadow
           boxShadow: "0px 8px 24px rgba(0,0,0,0.12)",
           overflow: "hidden",
           flexDirection: "row",
@@ -120,9 +121,7 @@ function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
                   })
                 : null}
               {isFocused ? (
-                <Text
-                  style={{ marginTop: 2, fontSize: 12, fontWeight: "700" }}
-                >
+                <Text style={{ marginTop: 2, fontSize: 12, fontWeight: "700" }}>
                   {String(label).replace("Tab", "")}
                 </Text>
               ) : (
@@ -147,7 +146,7 @@ export default function MainTabs() {
     >
       <Tab.Screen
         name="HomeTab"
-        component={HomeScreen}
+        component={HomeStack}
         options={{
           title: "Home",
           tabBarIcon: ({ focused, size }) => (
@@ -159,9 +158,10 @@ export default function MainTabs() {
           ),
         }}
       />
+
       <Tab.Screen
         name="CalendarTab"
-        component={CalendarScreen}
+        component={CalendarStack}
         options={{
           title: "Calendar",
           tabBarIcon: ({ focused, size }) => (
@@ -173,6 +173,7 @@ export default function MainTabs() {
           ),
         }}
       />
+
       <Tab.Screen
         name="WriteTab"
         component={EntryEditorScreen}
@@ -187,6 +188,7 @@ export default function MainTabs() {
           ),
         }}
       />
+
       <Tab.Screen
         name="ReportTab"
         component={ReportScreen}
@@ -201,6 +203,7 @@ export default function MainTabs() {
           ),
         }}
       />
+
       <Tab.Screen
         name="ProfileTab"
         component={ProfileScreen}

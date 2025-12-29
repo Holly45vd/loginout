@@ -1,11 +1,12 @@
+// /workspaces/loginout/log-in-diary/src/screens/home/components/RecentDiaryCarousel.tsx
 import React from "react";
-import { View, ScrollView, Pressable } from "react-native";
+import { View, ScrollView, Pressable, Image } from "react-native";
 import { Card, Text, Button, Chip } from "react-native-paper";
 
 type RecentCard = {
   dateId: string;
   label: string;
-  icon: string;
+  moodImage: any;   // require(...)
   energy: string;
   snippet: string;
 };
@@ -24,58 +25,50 @@ export default function RecentDiaryCarousel({
   onGoDayDetail,
 }: Props) {
   return (
-    <Card style={{ borderRadius: 14 }}>
-      <Card.Content>
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 10,
-          }}
-        >
-          <Text variant="titleMedium">최근 나의 일기</Text>
-          <Button mode="text" onPress={onGoMore} compact>
-            더 보기
+    <Card style={{ borderRadius: 18 }}>
+      <Card.Content style={{ gap: 10 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Text style={{ fontWeight: "900" as any, fontSize: 16 }}>최근 나의 일기</Text>
+          <Button compact onPress={onGoMore}>
+            더보기
           </Button>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={{ flexDirection: "row", gap: 14 }}>
-            {loading ? (
-              <Card style={{ width: 180, borderRadius: 14 }}>
-                <Card.Content style={{ alignItems: "center", paddingVertical: 22, gap: 6 }}>
-                  <Text style={{ fontSize: 20 }}>…</Text>
-                  <Text style={{ opacity: 0.7 }}>불러오는 중</Text>
-                </Card.Content>
-              </Card>
-            ) : cards.length === 0 ? (
-              <Card style={{ width: 180, borderRadius: 14 }}>
-                <Card.Content style={{ alignItems: "center", paddingVertical: 22, gap: 6 }}>
-                  <Text style={{ fontSize: 26 }}>📝</Text>
-                  <Text style={{ opacity: 0.7 }}>최근 기록 없음</Text>
-                </Card.Content>
-              </Card>
-            ) : (
-              cards.map((c) => (
-                <Pressable key={c.dateId} onPress={() => onGoDayDetail(c.dateId)}>
-                  <Card style={{ width: 180, borderRadius: 14 }}>
-                    <Card.Content style={{ alignItems: "center", paddingVertical: 16, gap: 8 }}>
-                      <Text style={{ fontSize: 44 }}>{c.icon}</Text>
-                      <Chip>{c.energy}</Chip>
-                      <Text style={{ opacity: 0.85, fontWeight: "700" as any }}>{c.label}</Text>
-                      {!!c.snippet && (
-                        <Text numberOfLines={2} style={{ opacity: 0.7, textAlign: "center" }}>
-                          {c.snippet}
-                        </Text>
-                      )}
-                    </Card.Content>
-                  </Card>
-                </Pressable>
-              ))
-            )}
-          </View>
-        </ScrollView>
+        {loading ? (
+          <Text style={{ opacity: 0.6 }}>불러오는 중…</Text>
+        ) : cards.length === 0 ? (
+          <Text style={{ opacity: 0.6 }}>최근 2주 기록이 없어.</Text>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+            {cards.map((c) => (
+              <Pressable key={c.dateId} onPress={() => onGoDayDetail(c.dateId)}>
+                <View
+                  style={{
+                    width: 220,
+                    borderRadius: 16,
+                    padding: 14,
+                    backgroundColor: "rgba(0,0,0,0.04)",
+                    gap: 10,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                    <Text style={{ fontWeight: "900" as any }}>{c.label}</Text>
+                    <Chip compact style={{ backgroundColor: "rgba(0,0,0,0.06)" }}>
+                      {c.energy}
+                    </Chip>
+                  </View>
+
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <Image source={c.moodImage} resizeMode="contain" style={{ width: 34, height: 34 }} />
+                    <Text numberOfLines={2} style={{ flex: 1, opacity: 0.75, fontWeight: "700" as any }}>
+                      {c.snippet || "내용 없음"}
+                    </Text>
+                  </View>
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
       </Card.Content>
     </Card>
   );
