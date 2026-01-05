@@ -4,7 +4,7 @@ import { View, ScrollView, Pressable, Image, Platform, Alert } from "react-nativ
 import dayjs from "dayjs";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, Text, Chip, Button, IconButton, Snackbar, Surface, useTheme } from "react-native-paper";
-
+import HomeHeroHeader from "./components/HomeHeroHeader";
 import { useAuth } from "../../app/providers/AuthProvider";
 import { getEntry, listEntriesByRange, deleteEntry } from "../../data/firebase/diaryRepo";
 import QuoteCard from "./components/QuoteCard";
@@ -156,7 +156,35 @@ export default function HomeScreen({ navigation }: any) {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
+
+
+
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 14 }}>
+
+<HomeHeroHeader
+  name={user?.displayName ?? "홀리"}
+  photoURL={user?.photoURL}
+  dateText={`Today ${dayjs().format("D MMM")}`}
+
+  todayLabel={`오늘 (${dayjs(todayId).format("MM-DD")})`}
+  moodImage={todayMoodImg}
+  title={hasToday ? "오늘도 기록했네" : "오늘 기록해"}
+  subtitle={
+    loadingToday
+      ? "불러오는 중…"
+      : (todaySnippet || (hasToday ? "내용 없음" : "아직 기록이 없어. 지금 써도 돼."))
+  }
+  energyText={hasToday ? todayEnergy : "기록 없음"}
+
+  onPressSearch={() => rootNav.navigate("Main", { screen: "ProfileTab" })}
+  onPressSettings={() => rootNav.navigate("Main", { screen: "ProfileTab" })}
+  onPressDetail={() => goDetail(todayId)}
+  onPressEdit={() => goWrite(todayId)}
+  detailDisabled={!hasToday}
+/>
+
+
+
         {/* 1) TODAY (큰 아이콘) */}
         <Card style={{ borderRadius: 22, borderWidth: 1, borderColor: BORDER }}>
           <Card.Content style={{ gap: 12 }}>
